@@ -22,3 +22,7 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+src/llvm.org
+src/main/out.txt
+out.ll

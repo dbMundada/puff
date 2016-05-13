@@ -70,7 +70,6 @@ func (l *lexer) accept(valid string) bool {
 	return false
 }
 
-
 func (l *lexer) skipWhitespace() {
 	r := l.peek()
 	for r == ' ' || r == '\t' || r == '\n' || r == '\r' {
@@ -159,9 +158,9 @@ func lexStatement(l *lexer) LexFn {
 		nextChar := l.peek()
 		if nextChar == '/' {
 			return lexLineComment
-		} else if  nextChar == '*' {
-			return lexBlockComment	
-		} 
+		} else if nextChar == '*' {
+			return lexBlockComment
+		}
 		l.backup()
 		return lexExpr
 	case ch == eof:
@@ -175,31 +174,31 @@ func lexStatement(l *lexer) LexFn {
 
 func lexLineComment(l *lexer) LexFn {
 	r := l.next()
-	Loop:
+Loop:
 	for {
 		r = l.peek()
-	 	if r == '\n' {
-	 		l.emit(token.COMMENT)
-	 		break Loop
-	 	} else {
-	 		l.next()
-	 	}
+		if r == '\n' {
+			l.emit(token.COMMENT)
+			break Loop
+		} else {
+			l.next()
+		}
 	}
 	return lexStatement
 }
 
 func lexBlockComment(l *lexer) LexFn {
 	r := l.next()
-	Loop:
+Loop:
 	for {
-	 	if r == '*' {
-	 		if l.next() == '/' {
-	 			l.emit(token.COMMENT)
-	 			break Loop
-	 		}		
-	 	}
-	 	fmt.Printf("%c", r)
-	 	r = l.next()
+		if r == '*' {
+			if l.next() == '/' {
+				l.emit(token.COMMENT)
+				break Loop
+			}
+		}
+		fmt.Printf("%c", r)
+		r = l.next()
 	}
 	return lexStatement
 }
@@ -274,6 +273,24 @@ func lexExpr(l *lexer) LexFn {
 		return lexStatement
 	case r == '-':
 		l.emit(token.SUB)
+		return lexStatement
+	case r == '|':
+		nextChar := l.peek()
+		if nextChar == '|' {
+			l.next()
+			l.emit(token.LOR)
+		} else {
+			l.emit(token.OR)
+		}
+		return lexStatement
+	case r == '&':
+		nextChar := l.peek()
+		if nextChar == '&' {
+			l.next()
+			l.emit(token.LAND)
+		} else {
+			l.emit(token.AND)
+		}
 		return lexStatement
 	case r == '"':
 		return lexQuote
@@ -362,7 +379,6 @@ Loop:
 	for {
 		switch r := l.next(); {
 		case isSpace(r):
-			fmt.Println(r)
 			l.ignore()
 		default:
 			l.backup()
@@ -405,6 +421,43 @@ func isAlphaNumeric(r rune) bool {
 	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
+var validIdentTerminators = map[string]struct{} {
+	"=": {},
+
+	"+": {},
+	"-": {},
+	"*": {},
+	"/": {},
+	"%": {},
+
+	"&": {},
+	"|": {},
+	"^": {},
+	"<<": {},
+	">>": {},
+
+	"&&": {},
+	"||": {},
+
+	"==": {},
+	"<": {},
+	">": {},
+	"!": {},
+
+	"(": {},
+	"[": {},
+	"{": {},
+	",": {},
+	".": {},
+
+	")": {},
+	"]": {},
+	"}": {},
+	";": {},
+	":": {},
+
+	"=>": {},
+}
 // atTerminator reports whether the input is at valid termination character to
 // appear after an identifier.
 func (l *lexer) atTerminator() bool {
@@ -412,8 +465,9 @@ func (l *lexer) atTerminator() bool {
 	if isSpace(r) || isEndOfLine(r) {
 		return true
 	}
-	switch r {
-	case eof, '.', ',', '|', ':', ')', '(':
+
+	_, ok := validIdentTerminators[string(r)]
+	if r == eof || ok  {
 		return true
 	}
 	return false
